@@ -41,7 +41,7 @@ with st.sidebar:
     
     # [카톡 버튼 유지] 본인 오픈채팅방 주소로 꼭 확인하세요!
     st.markdown("""
-        <a href="https://open.kakao.com/o/sExample" target="_blank" class="kakao-btn">
+        <a href="https://open.kakao.com/o/seH2dLdi" target="_blank" class="kakao-btn">
             💬 카카오톡 무료 상담
         </a>
     """, unsafe_allow_html=True)
