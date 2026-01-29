@@ -4,3 +4,5 @@ Pillow
 folium
 streamlit-folium
 google-generativeai
+gspread
+oauth2client
