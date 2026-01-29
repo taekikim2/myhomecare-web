@@ -12,13 +12,21 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 스타일 설정 (깔끔하게)
+# 2. 스타일 설정 (카톡 버튼 디자인 유지)
 st.markdown("""
     <style>
     .main-header { font-size: 2.5rem; color: #1E3A8A; font-weight: 700; }
+    /* 카카오톡 버튼 스타일 */
     .kakao-btn {
-        background-color: #FEE500; color: #3C1E1E; padding: 10px 20px;
-        border-radius: 10px; text-decoration: none; font-weight: bold;
+        background-color: #FEE500;
+        color: #3C1E1E;
+        padding: 10px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: bold;
+        display: block;
+        text-align: center;
+        margin: 10px 0;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -30,6 +38,14 @@ with st.sidebar:
     st.markdown("---")
     menu = st.radio("메뉴", ["홈", "서비스 소개", "시공 갤러리", "출장 지역", "견적 문의", "🔒 관리자 모드"])
     st.markdown("---")
+    
+    # [카톡 버튼 유지] 본인 오픈채팅방 주소로 꼭 확인하세요!
+    st.markdown("""
+        <a href="https://open.kakao.com/o/sExample" target="_blank" class="kakao-btn">
+            💬 카카오톡 무료 상담
+        </a>
+    """, unsafe_allow_html=True)
+    
     st.markdown("### 📞 010-6533-3137")
 
 # === [기능 1~5: 일반 고객용 화면] ===
@@ -64,34 +80,32 @@ elif menu == "견적 문의":
     st.header("📝 상담 신청")
     st.write("010-6533-3137 번으로 문자나 전화 주세요!")
 
-# === [기능 6: 관리자 모드 (사장님 요청사항 완벽 반영)] ===
+# === [기능 6: 관리자 모드 (Gemini 2.5 + 해시태그 강화)] ===
 elif menu == "🔒 관리자 모드":
-    st.header("🤖 블로그 자동 포스팅 (SEO 전문가 버전)")
+    st.header("🤖 블로그 포스팅 (중소형 키워드 타겟팅)")
     
     password = st.text_input("관리자 비밀번호", type="password")
     
     if password == st.secrets.get("ADMIN_PW", ""):
-        st.success("✅ 로그인 성공! 정교한 프롬프트가 적용되었습니다.")
+        st.success("✅ 로그인 성공! 해시태그 분석 기능이 활성화되었습니다.")
         st.markdown("---")
         
-        # 입력 폼
         with st.form("blog_form"):
             col1, col2 = st.columns(2)
             with col1:
                 topic = st.selectbox("공사 종류", ["누수 탐지", "욕실 방수", "수전 교체", "화장실 리모델링", "기타 집수리"])
                 location = st.text_input("현장 위치", "부산 해운대구 좌동")
             
-            detail = st.text_area("작업 내용 및 특이사항 (최대한 자세히 적어주세요)", height=150)
+            detail = st.text_area("작업 내용 (최대한 자세히 적어주세요)", height=150)
             
-            submit = st.form_submit_button("📝 블로그 글 생성하기 (이모지 없음)")
+            submit = st.form_submit_button("📝 블로그 글 생성하기 (2.5 Flash)")
             
             if submit:
                 try:
-                    # 1. API 설정
                     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-                    model = genai.GenerativeModel('gemini-2.5-flash') # 안정적인 최신 버전
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
-                    # 2. 사장님이 만드신 '마스터 프롬프트' 적용 (이모지 금지 포함)
+                    # [업그레이드] 해시태그 전략이 추가된 프롬프트
                     MASTER_PROMPT = f"""
                     # Role: 마이홈케어플러스 대표 (부산 누수/방수 전문가) + SEO 마케팅 전문가
                     
@@ -101,24 +115,25 @@ elif menu == "🔒 관리자 모드":
                     - 상세 내용: {detail}
 
                     # [작성 가이드라인]
-                    1. 글자 수: 1500~2000자 내외로 네이버 로직에 맞춰 작성.
-                    2. 구조: [제목] -> [도입부] -> [현장 정밀 분석] -> [해결 과정] -> [마무리] -> [FAQ]
-                    3. 키워드: '{location} {topic}', '부산 {topic}' 키워드를 자연스럽게 5회 이상 반복.
-                    4. 가독성: 모바일 환경을 고려하여 문단은 3~4줄로 짧게 끊기.
-                    5. 필수 포함:
-                       - 업체명: 마이홈케어플러스
-                       - 연락처: 010-6533-3137 (중간과 끝에 강조)
-                       - 슬로건: "고치지 못하면 돈을 받지 않습니다"
+                    1. 글자 수: 1500~2000자 내외.
+                    2. 구조: [제목] -> [도입부] -> [현장 정밀 분석] -> [해결 과정] -> [마무리] -> [FAQ] -> [추천 태그]
+                    3. 키워드 배치: '{location} {topic}' 같은 세부 지역 키워드를 본문에 자연스럽게 5회 이상 녹일 것.
+                    4. 가독성: 모바일 최적화 (3~4줄 문단 나누기).
                     
-                    # [매우 중요: 톤앤매너]
-                    - 신뢰감 있고 전문적인 어조 ('해요체' 사용).
-                    - **절대 이모지(😊, ✨, 💧 등)를 사용하지 마세요.** 오직 텍스트와 문장력으로만 승부하세요.
-                    - 특수문자는 가독성을 위한 점(·), 대시(-) 정도만 허용합니다.
+                    # [★중요: 해시태그 전략 (중소형 키워드)]
+                    - 단순히 #누수 #방수 같은 경쟁 심한 '대형 키워드'만 쓰지 마세요.
+                    - **검색량은 적지만 구매 전환율이 높은 '중소형(세부) 키워드' 10개를 반드시 추출**하여 글 맨 마지막에 달아주세요.
+                    - 조합 예시: 지역명+동이름+시공명 (예: #해운대좌동누수), 아파트명+시공명 (예: #벽산아파트방수), 증상+해결 (예: #천장물샘해결)
+                    
+                    # [톤앤매너]
+                    - 신뢰감 있는 '해요체' 사용.
+                    - **이모지 절대 사용 금지** (오직 텍스트로만 전문성 강조).
+                    - 업체명(마이홈케어플러스), 연락처(010-6533-3137) 필수 포함.
                     """
                     
-                    with st.spinner("AI가 SEO 최적화 글을 작성 중입니다... (이모지 제거 중 🧹)"):
+                    with st.spinner("Gemini 2.5가 황금 키워드를 분석 중입니다..."):
                         response = model.generate_content(MASTER_PROMPT)
-                        st.markdown("### 👇 아래 내용을 블로그에 복사해 주세요.")
+                        st.markdown("### 👇 블로그에 복사해서 쓰세요 (해시태그 포함)")
                         st.code(response.text)
                         
                 except Exception as e:
