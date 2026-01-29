@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 스타일 설정
+# 2. 스타일 설정 (깔끔하게)
 st.markdown("""
     <style>
     .main-header { font-size: 2.5rem; color: #1E3A8A; font-weight: 700; }
@@ -64,65 +64,65 @@ elif menu == "견적 문의":
     st.header("📝 상담 신청")
     st.write("010-6533-3137 번으로 문자나 전화 주세요!")
 
-# === [기능 6: 관리자 모드 (Gemini 2.5 Flash 적용)] ===
+# === [기능 6: 관리자 모드 (사장님 요청사항 완벽 반영)] ===
 elif menu == "🔒 관리자 모드":
-    st.header("🤖 사장님 전용 AI 비서 (Ver 2.5)")
+    st.header("🤖 블로그 자동 포스팅 (SEO 전문가 버전)")
     
-    password = st.text_input("관리자 비밀번호를 입력하세요", type="password")
+    password = st.text_input("관리자 비밀번호", type="password")
     
-    # [수정됨] Secrets에서 바로 꺼내오도록 변경 (KeyError 해결!)
     if password == st.secrets.get("ADMIN_PW", ""):
-        st.success("✅ 로그인 성공! 최신 Gemini 2.5 Flash가 대기 중입니다.")
+        st.success("✅ 로그인 성공! 정교한 프롬프트가 적용되었습니다.")
         st.markdown("---")
         
+        # 입력 폼
         with st.form("blog_form"):
             col1, col2 = st.columns(2)
             with col1:
-                topic = st.selectbox("공사 종류", ["누수 탐지", "욕실 방수", "수전 교체", "화장실 리모델링"])
+                topic = st.selectbox("공사 종류", ["누수 탐지", "욕실 방수", "수전 교체", "화장실 리모델링", "기타 집수리"])
                 location = st.text_input("현장 위치", "부산 해운대구 좌동")
             
-            detail = st.text_area("특이사항 (예: 아랫집 천장에 물이 샜음, 3시간 만에 해결)")
+            detail = st.text_area("작업 내용 및 특이사항 (최대한 자세히 적어주세요)", height=150)
             
-            if st.form_submit_button("📝 블로그 글 생성하기"):
+            submit = st.form_submit_button("📝 블로그 글 생성하기 (이모지 없음)")
+            
+            if submit:
                 try:
+                    # 1. API 설정
                     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                    model = genai.GenerativeModel('gemini-1.5-flash') # 안정적인 최신 버전
                     
-                    # [여기!] 사장님 요청대로 2.5 Flash 적용 완료
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    # 2. 사장님이 만드신 '마스터 프롬프트' 적용 (이모지 금지 포함)
+                    MASTER_PROMPT = f"""
+                    # Role: 마이홈케어플러스 대표 (부산 누수/방수 전문가) + SEO 마케팅 전문가
                     
-                    # [업그레이드] 사장님을 위한 '상위노출 전문가용' 프롬프트
-                    prompt = f"""
-                    당신은 부산/경남 최고의 설비 전문 업체 '마이홈케어플러스'의 베테랑 블로그 마케터입니다.
-                    아래 [현장 정보]를 바탕으로, 네이버 검색 로직(SEO)에 최적화된 매력적인 블로그 포스팅을 작성해 주세요.
-
-                    [현장 정보]
+                    # [현장 정보]
                     - 시공 종류: {topic}
                     - 현장 위치: {location}
-                    - 작업 내용 및 핵심 성과: {detail}
+                    - 상세 내용: {detail}
 
-                    [작성 가이드라인]
-                    1. **제목 선정**: 클릭을 부르는 매력적인 제목 1개를 맨 위에 작성해 주세요. (예: "부산 {location} {topic}, 30분 만에 해결한 썰")
-                    2. **본문 구조**:
-                       - **인사말**: 계절감 있는 인사와 함께 전문가다운 소개.
-                       - **현장 상황**: 고객이 겪던 불편함(누수, 파손 등)에 공감하며 문제 상황 묘사.
-                       - **작업 과정**: 전문 장비 사용, 꼼꼼한 시공 과정을 구체적으로 서술 (중간중간 [현장 사진] 이라고 표시).
-                       - **마무리**: 깔끔한 뒷정리와 A/S 보장 강조.
-                    3. **필수 포함**:
-                       - 업체명: '마이홈케어플러스'
-                       - 연락처: '010-6533-3137' (눈에 띄게 강조)
-                       - 강조 포인트: "고치지 못하면 돈을 받지 않습니다", "대표가 직접 시공합니다"
-                    4. **톤앤매너**: 신뢰감 있으면서도 친절한 '해요체'. 이모지(💧, 🛠️, 🏠)를 적절히 사용하여 가독성 높이기.
-                    5. **해시태그**: #부산{topic} #{location}{topic} #부산설비 등 검색 잘 되는 태그 10개 이상.
+                    # [작성 가이드라인]
+                    1. 글자 수: 1500~2000자 내외로 네이버 로직에 맞춰 작성.
+                    2. 구조: [제목] -> [도입부] -> [현장 정밀 분석] -> [해결 과정] -> [마무리] -> [FAQ]
+                    3. 키워드: '{location} {topic}', '부산 {topic}' 키워드를 자연스럽게 5회 이상 반복.
+                    4. 가독성: 모바일 환경을 고려하여 문단은 3~4줄로 짧게 끊기.
+                    5. 필수 포함:
+                       - 업체명: 마이홈케어플러스
+                       - 연락처: 010-6533-3137 (중간과 끝에 강조)
+                       - 슬로건: "고치지 못하면 돈을 받지 않습니다"
+                    
+                    # [매우 중요: 톤앤매너]
+                    - 신뢰감 있고 전문적인 어조 ('해요체' 사용).
+                    - **절대 이모지(😊, ✨, 💧 등)를 사용하지 마세요.** 오직 텍스트와 문장력으로만 승부하세요.
+                    - 특수문자는 가독성을 위한 점(·), 대시(-) 정도만 허용합니다.
                     """
                     
-                    with st.spinner("Gemini 2.5가 글을 쓰고 있습니다..."):
-                        response = model.generate_content(prompt)
-                        st.markdown("### 👇 복사해서 블로그에 붙여넣으세요!")
+                    with st.spinner("AI가 SEO 최적화 글을 작성 중입니다... (이모지 제거 중 🧹)"):
+                        response = model.generate_content(MASTER_PROMPT)
+                        st.markdown("### 👇 아래 내용을 블로그에 복사해 주세요.")
                         st.code(response.text)
                         
                 except Exception as e:
-                    st.error(f"에러가 났어요: {e}")
-                    st.caption("※ 만약 모델 에러가 뜨면 서버가 아직 2.5를 못 받아들이는 상태일 수 있으니 알려주세요.")
+                    st.error(f"에러가 발생했습니다: {e}")
     
     elif password:
         st.error("❌ 비밀번호가 틀렸습니다.")
