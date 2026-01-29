@@ -31,21 +31,33 @@ with st.sidebar:
     st.markdown("""<a href="https://open.kakao.com/o/sExample" target="_blank" class="kakao-btn">💬 카카오톡 무료 상담</a>""", unsafe_allow_html=True)
     st.markdown("### 📞 010-6533-3137")
 
-# --- 구글 시트 연결 함수 (로봇 부르기) ---
+# --- [수정됨] 구글 시트 연결 함수 (더 강력해짐!) ---
 def add_to_sheet(date, place, work, price, note):
     try:
-        # Secrets에서 키 꺼내기
-        json_key = json.loads(st.secrets["GOOGLE_SHEET_KEY"])
+        # 1. Secrets에서 키 꺼내기
+        raw_key = st.secrets["GOOGLE_SHEET_KEY"]
+        
+        # 2. JSON 변환 (여기서 에러가 났던 것 해결!)
+        try:
+            # 줄바꿈 문자가 있어도 너그럽게 이해해라(strict=False)
+            json_key = json.loads(raw_key, strict=False)
+        except json.JSONDecodeError:
+            # 그래도 안 되면, 강제로 줄바꿈을 펴준다
+            json_key = json.loads(raw_key.replace('\n', '\\n'), strict=False)
+
+        # 3. 구글 드라이브 연결
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json_key, scope)
         client = gspread.authorize(creds)
         
-        # 엑셀 파일 열기 (이름이 똑같아야 해요!)
+        # 4. 엑셀 파일 열기
         sheet = client.open("마이홈케어 시공장부").sheet1
         sheet.append_row([str(date), place, work, price, note])
         return True
+        
     except Exception as e:
         st.error(f"장부 저장 실패: {e}")
+        st.caption("※ 힌트: 구글 시트 파일 이름이 '마이홈케어 시공장부'가 맞는지, 로봇 계정(sheet-bot)에게 '편집자' 권한을 줬는지 확인해보세요.")
         return False
 
 # === 메인 기능 ===
@@ -75,17 +87,15 @@ elif menu == "견적 문의":
     st.header("📝 상담 신청")
     st.write("010-6533-3137 문자/전화 환영")
 
-# === [관리자 모드: 블로그 + 장부] ===
+# === [관리자 모드] ===
 elif menu == "🔒 관리자 모드":
     password = st.text_input("비밀번호", type="password")
     
     if password == st.secrets.get("ADMIN_PW", ""):
         st.success("✅ 로그인 성공")
         
-        # 탭을 나눠서 깔끔하게!
         tab1, tab2 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 적기"])
         
-        # [기능 1] 블로그 글쓰기
         with tab1:
             st.subheader("블로그 포스팅 (Gemini 2.5)")
             with st.form("blog_form"):
@@ -106,7 +116,6 @@ elif menu == "🔒 관리자 모드":
                             st.code(response.text)
                     except Exception as e: st.error(f"에러: {e}")
 
-        # [기능 2] 시공 장부 (NEW!)
         with tab2:
             st.subheader("오늘의 매출 장부")
             with st.form("sheet_form"):
@@ -122,5 +131,3 @@ elif menu == "🔒 관리자 모드":
                     with st.spinner("엑셀에 적는 중..."):
                         if add_to_sheet(date, s_place, s_work, s_price, s_note):
                             st.success(f"✅ 저장 완료! {s_price}원 입력됨.")
-                        else:
-                            st.error("저장 실패. 설정을 확인하세요.")
