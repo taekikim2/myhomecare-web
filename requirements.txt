@@ -3,3 +3,4 @@ streamlit-image-comparison
 Pillow
 folium
 streamlit-folium
+google-generativeai
