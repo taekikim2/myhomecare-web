@@ -7,10 +7,12 @@ import google.generativeai as genai
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
+import io # 추가됨
 
 # 파일 불러오기
 import prompts      
-import calculator   
+import calculator
+import watermarker # 방금 만든 도장 기계 불러오기!
 
 # 1. 페이지 설정
 st.set_page_config(page_title="마이홈케어플러스", page_icon="🏠", layout="wide")
@@ -77,58 +79,34 @@ def add_to_sheet(date, place, work, price, note):
         st.error(f"장부 저장 실패: {e}")
         return False
 
-# === [1. 홈 화면: 멀티 탭 슬라이더 적용] ===
+# === [메인 기능들 (생략 - 기존과 동일)] ===
 if menu == "홈":
     hero_col1, hero_col2 = st.columns([4, 6], gap="large")
-
     with hero_col1:
         st.markdown('<h1 class="hero-title">지긋지긋한 누수,<br>확실하게 잡습니다.</h1>', unsafe_allow_html=True)
         st.markdown('<p class="hero-subtitle">부산/경남 1등 홈케어 전문가<br><span class="highlight">"못 고치면 10원도 받지 않겠습니다."</span></p>', unsafe_allow_html=True)
         st.write("") 
         st.info("💡 지금 바로 전문가와 상담하세요!")
         st.markdown("### 📞 010-6533-3137 (긴급출동)")
-
     with hero_col2:
         st.write("")
-        # [핵심] 3가지 탭으로 나눠서 다양한 사례 보여주기
         tab1, tab2, tab3 = st.tabs(["🛁 욕실 리모델링", "💧 누수 탐지", "🧱 방수 공사"])
-        
         with tab1:
-            try:
-                image_comparison(
-                    img1="case1_before.jpg", img2="case1_after.jpg", 
-                    label1="철거 전", label2="리모델링 완료", width=800, in_memory=True
-                )
+            try: image_comparison(img1="case1_before.jpg", img2="case1_after.jpg", label1="철거 전", label2="리모델링 완료", width=800, in_memory=True)
             except: st.warning("case1_before.jpg, case1_after.jpg 사진을 올려주세요!")
-
         with tab2:
-            try:
-                image_comparison(
-                    img1="case2_before.jpg", img2="case2_after.jpg", 
-                    label1="누수 피해", label2="탐지 및 복구", width=800, in_memory=True
-                )
+            try: image_comparison(img1="case2_before.jpg", img2="case2_after.jpg", label1="누수 피해", label2="탐지 및 복구", width=800, in_memory=True)
             except: st.warning("case2_before.jpg, case2_after.jpg 사진을 올려주세요!")
-
         with tab3:
-            try:
-                image_comparison(
-                    img1="case3_before.jpg", img2="case3_after.jpg", 
-                    label1="방수 전", label2="방수 완료", width=800, in_memory=True
-                )
+            try: image_comparison(img1="case3_before.jpg", img2="case3_after.jpg", label1="방수 전", label2="방수 완료", width=800, in_memory=True)
             except: st.warning("case3_before.jpg, case3_after.jpg 사진을 올려주세요!")
-
     st.divider()
-
     st.subheader("왜 마이홈케어플러스인가요?")
     c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown('<div class="feature-card"><div class="feature-icon">🔍</div><div class="feature-title">첨단 장비 정밀 탐지</div><div class="feature-text">청음식/가스식 최신 장비 보유.<br>미세한 누수까지 찾아냅니다.</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown('<div class="feature-card"><div class="feature-icon">🛡️</div><div class="feature-title">책임 시공 보장</div><div class="feature-text">누수 원인을 못 찾으면<br>비용을 일절 받지 않습니다.</div></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown('<div class="feature-card"><div class="feature-icon">🚀</div><div class="feature-title">부산 전 지역 긴급출동</div><div class="feature-text">해운대, 수영, 동래 어디든<br>빠르게 달려갑니다.</div></div>', unsafe_allow_html=True)
+    with c1: st.markdown('<div class="feature-card"><div class="feature-icon">🔍</div><div class="feature-title">첨단 장비 정밀 탐지</div><div class="feature-text">청음식/가스식 최신 장비 보유.<br>미세한 누수까지 찾아냅니다.</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown('<div class="feature-card"><div class="feature-icon">🛡️</div><div class="feature-title">책임 시공 보장</div><div class="feature-text">누수 원인을 못 찾으면<br>비용을 일절 받지 않습니다.</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown('<div class="feature-card"><div class="feature-icon">🚀</div><div class="feature-title">부산 전 지역 긴급출동</div><div class="feature-text">해운대, 수영, 동래 어디든<br>빠르게 달려갑니다.</div></div>', unsafe_allow_html=True)
 
-# === [2. 서비스 소개] ===
 elif menu == "서비스 소개":
     st.header("🛠️ 마이홈케어플러스 전문 시공")
     st.write("부산/경남 대표 홈케어! 아래 모든 항목을 직접 시공합니다.")
@@ -149,32 +127,30 @@ elif menu == "서비스 소개":
         st.markdown('<div class="service-box"><b>9. 샤워기 설치</b><br>- 해바라기 샤워기, 선반형 샤워기 설치</div>', unsafe_allow_html=True)
         st.markdown('<div class="service-box"><b>10. 환풍기 교체</b><br>- 힘 쎈 환풍기, 댐퍼형(냄새 차단) 환풍기 교체</div>', unsafe_allow_html=True)
 
-# === [3. 시공 갤러리] ===
 elif menu == "시공 갤러리":
     st.header("✨ 시공 전/후 비교")
-    try:
-        image_comparison(img1="before.jpg", img2="after.jpg", label1="Before", label2="After", width=700, in_memory=True)
+    try: image_comparison(img1="before.jpg", img2="after.jpg", label1="Before", label2="After", width=700, in_memory=True)
     except: st.error("사진 파일 필요")
 
-# === [4. 출장 지역] ===
 elif menu == "출장 지역":
     st.header("📍 출장 가능 지역")
     m = folium.Map(location=[35.1796, 129.0756], zoom_start=11)
     folium.Circle(location=[35.1796, 129.0756], radius=20000, color="red", fill=True, fill_opacity=0.1).add_to(m)
     st_folium(m, width=800, height=500)
 
-# === [5. 견적 문의] ===
 elif menu == "견적 문의":
     calculator.show_estimate()
 
-# === [6. 관리자 모드] ===
+# === [관리자 모드 (업그레이드됨!)] ===
 elif menu == "🔒 관리자 모드":
     password = st.text_input("비밀번호", type="password")
     
     if password == st.secrets.get("ADMIN_PW", ""):
         st.success("✅ 로그인 성공")
-        tab1, tab2 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 적기"])
+        # 탭이 3개로 늘었습니다!
+        tab1, tab2, tab3 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 적기", "🖼️ 사진 워터마크"])
         
+        # [기능 1] 블로그 글쓰기
         with tab1:
             st.subheader("블로그 포스팅 (Gemini 2.5)")
             with st.form("blog_form"):
@@ -195,6 +171,7 @@ elif menu == "🔒 관리자 모드":
                             st.code(response.text)
                     except Exception as e: st.error(f"에러: {e}")
 
+        # [기능 2] 시공 장부
         with tab2:
             st.subheader("오늘의 매출 장부")
             with st.form("sheet_form"):
@@ -203,10 +180,37 @@ elif menu == "🔒 관리자 모드":
                 s_work = st.text_input("시공 내용")
                 s_price = st.number_input("받은 금액 (원)", step=10000)
                 s_note = st.text_input("비고")
-                
                 submit_sheet = st.form_submit_button("💾 장부에 저장하기")
-                
                 if submit_sheet:
                     with st.spinner("엑셀에 적는 중..."):
                         if add_to_sheet(date, s_place, s_work, s_price, s_note):
                             st.success(f"✅ 저장 완료! {s_price}원 입력됨.")
+                            
+        # [기능 3] 워터마크 찍기 (NEW!)
+        with tab3:
+            st.subheader("📸 사진 도장 찍기 (워터마크)")
+            st.write("블로그에 올릴 사진에 자동으로 서명을 넣습니다.")
+            
+            uploaded_file = st.file_uploader("사진 파일을 드래그하거나 클릭해서 올리세요", type=["jpg", "png", "jpeg"])
+            
+            if uploaded_file is not None:
+                # 기본 문구 (원하면 수정 가능하게 입력창 제공)
+                default_text = "마이홈케어플러스 010-6533-3137"
+                watermark_text = st.text_input("들어갈 문구", value=default_text)
+                
+                if st.button("도장 쾅! 찍기"):
+                    with st.spinner("열심히 도장 찍는 중..."):
+                        # watermarker.py에 있는 함수 호출!
+                        final_img, img_bytes = watermarker.add_watermark(uploaded_file, watermark_text)
+                        
+                        st.success("완성! 아래 버튼을 눌러 다운로드하세요.")
+                        # 결과물 보여주기
+                        st.image(final_img, caption="워터마크 적용된 사진", use_container_width=True)
+                        
+                        # 다운로드 버튼 제공
+                        st.download_button(
+                            label="💾 완성된 사진 다운로드",
+                            data=img_bytes,
+                            file_name=f"watermarked_{uploaded_file.name}",
+                            mime="image/jpeg"
+                        )
