@@ -8,8 +8,9 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 import io
-import pandas as pd # 데이터를 다루는 판다스 추가!
+import pandas as pd
 from datetime import datetime
+import random # 후기 랜덤으로 보여주기 위해 추가
 
 # 파일 불러오기
 import prompts      
@@ -39,12 +40,21 @@ st.markdown("""
     .feature-title { font-weight: bold; font-size: 1.2rem; color: #1E3A8A; margin-bottom: 10px; }
     .feature-text { font-size: 1rem; color: #666; line-height: 1.6; }
 
+    /* 후기 카드 스타일 (NEW) */
+    .review-card {
+        background-color: #FFF8E1; padding: 20px; border-radius: 15px;
+        border: 1px solid #FFECB3; margin-bottom: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .stars { color: #FFD700; font-size: 1.2rem; }
+    .review-text { font-size: 1.1rem; font-weight: bold; color: #333; margin: 10px 0; }
+    .review-info { font-size: 0.9rem; color: #666; text-align: right; }
+
     .kakao-btn {
         background-color: #FEE500; color: #3C1E1E; padding: 12px 20px;
         border-radius: 8px; text-decoration: none; font-weight: bold;
         display: block; text-align: center; margin: 10px 0; font-size: 1rem;
     }
-    
     .service-box {
         background-color: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;
         border-left: 5px solid #1E3A8A;
@@ -62,7 +72,7 @@ with st.sidebar:
     st.markdown("""<a href="https://open.kakao.com/o/sExample" target="_blank" class="kakao-btn">💬 카카오톡 무료 상담</a>""", unsafe_allow_html=True)
     st.markdown("### 📞 010-6533-3137")
 
-# --- 구글 시트 연결 설정 (공통 사용) ---
+# --- 구글 시트 연결 설정 ---
 def get_google_sheet():
     try:
         raw_key = st.secrets["GOOGLE_SHEET_KEY"]
@@ -70,37 +80,33 @@ def get_google_sheet():
             json_key = json.loads(raw_key, strict=False)
         except json.JSONDecodeError:
             json_key = json.loads(raw_key.replace('\n', '\\n'), strict=False)
-
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json_key, scope)
         client = gspread.authorize(creds)
         return client.open("마이홈케어 시공장부").sheet1
-    except Exception as e:
-        return None
+    except: return None
 
-# [데이터 쓰기]
-def add_to_sheet(date, place, work, price, note):
+# [업그레이드] 후기(review)까지 저장하도록 수정
+def add_to_sheet(date, place, work, price, note, review):
     sheet = get_google_sheet()
     if sheet:
         try:
-            sheet.append_row([str(date), place, work, price, note])
+            # 6번째 칸(후기)까지 저장
+            sheet.append_row([str(date), place, work, price, note, review])
             return True
         except: return False
     return False
 
-# [NEW] [데이터 읽기] 장부 가져오기 함수
 def load_data():
     sheet = get_google_sheet()
     if sheet:
         try:
-            # 모든 데이터를 가져와서 표(DataFrame)로 만듭니다.
             data = sheet.get_all_records()
-            df = pd.DataFrame(data)
-            return df
-        except: return pd.DataFrame() # 에러나면 빈 표 반환
+            return pd.DataFrame(data)
+        except: return pd.DataFrame()
     return pd.DataFrame()
 
-# === [메인 화면 내용 (기존 동일)] ===
+# === [메인 화면] ===
 if menu == "홈":
     hero_col1, hero_col2 = st.columns([4, 6], gap="large")
     with hero_col1:
@@ -121,13 +127,57 @@ if menu == "홈":
         with tab3:
             try: image_comparison(img1="case3_before.jpg", img2="case3_after.jpg", label1="방수 전", label2="방수 완료", width=800, in_memory=True)
             except: st.warning("case3_before.jpg, case3_after.jpg 사진을 올려주세요!")
+    
     st.divider()
+
+    # === [NEW] 고객 후기 섹션 ===
+    st.subheader("⭐⭐⭐⭐⭐ 고객님들의 찐 후기")
+    
+    # 데이터 가져오기
+    df = load_data()
+    
+    if not df.empty and '후기' in df.columns:
+        # 후기가 비어있지 않은 것만 골라냄
+        reviews = df[df['후기'].astype(str).str.strip() != ""]
+        
+        if not reviews.empty:
+            # 최신순으로 3개만 보여주거나, 랜덤으로 보여줌
+            recent_reviews = reviews.tail(3).iloc[::-1] # 최신 3개 역순
+            
+            r_col1, r_col2, r_col3 = st.columns(3)
+            
+            # 후기 카드를 예쁘게 보여줌
+            for idx, row in enumerate(recent_reviews.itertuples()):
+                # 내용이 너무 길면 자르기
+                short_review = row.후기[:50] + "..." if len(str(row.후기)) > 50 else row.후기
+                
+                # HTML로 예쁜 카드 만들기
+                card_html = f"""
+                <div class="review-card">
+                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                    <div class="review-text">"{short_review}"</div>
+                    <div class="review-info">{row.현장명} 고객님<br>({row.시공내용})</div>
+                </div>
+                """
+                
+                if idx % 3 == 0: r_col1.markdown(card_html, unsafe_allow_html=True)
+                elif idx % 3 == 1: r_col2.markdown(card_html, unsafe_allow_html=True)
+                else: r_col3.markdown(card_html, unsafe_allow_html=True)
+                
+        else:
+            st.info("아직 등록된 후기가 없습니다. 첫 번째 주인공이 되어주세요!")
+    else:
+        st.info("후기 데이터를 불러오는 중입니다...")
+
+    st.divider()
+    
     st.subheader("왜 마이홈케어플러스인가요?")
     c1, c2, c3 = st.columns(3)
     with c1: st.markdown('<div class="feature-card"><div class="feature-icon">🔍</div><div class="feature-title">첨단 장비 정밀 탐지</div><div class="feature-text">청음식/가스식 최신 장비 보유.<br>미세한 누수까지 찾아냅니다.</div></div>', unsafe_allow_html=True)
     with c2: st.markdown('<div class="feature-card"><div class="feature-icon">🛡️</div><div class="feature-title">책임 시공 보장</div><div class="feature-text">누수 원인을 못 찾으면<br>비용을 일절 받지 않습니다.</div></div>', unsafe_allow_html=True)
     with c3: st.markdown('<div class="feature-card"><div class="feature-icon">🚀</div><div class="feature-title">부산 전 지역 긴급출동</div><div class="feature-text">해운대, 수영, 동래 어디든<br>빠르게 달려갑니다.</div></div>', unsafe_allow_html=True)
 
+# === [나머지 메뉴들 (생략 - 기존과 동일)] ===
 elif menu == "서비스 소개":
     st.header("🛠️ 마이홈케어플러스 전문 시공")
     st.write("부산/경남 대표 홈케어! 아래 모든 항목을 직접 시공합니다.")
@@ -162,7 +212,7 @@ elif menu == "출장 지역":
 elif menu == "견적 문의":
     calculator.show_estimate()
 
-# === [관리자 모드 (매출 상황판 추가!)] ===
+# === [관리자 모드 (후기 입력 기능 추가!)] ===
 elif menu == "🔒 관리자 모드":
     password = st.text_input("비밀번호", type="password")
     
@@ -189,60 +239,47 @@ elif menu == "🔒 관리자 모드":
                             st.code(response.text)
                     except Exception as e: st.error(f"에러: {e}")
 
-        # [NEW] 매출 장부 (데이터 조회 기능 추가)
         with tab2:
             st.subheader("📊 마이홈케어 매출 현황")
-            
-            # 1. 엑셀에서 데이터 읽어오기
             df = load_data()
-            
-            if not df.empty:
+            if not df.empty and '금액' in df.columns:
                 try:
-                    # 금액 열을 숫자로 변환 (쉼표 제거 등 처리)
-                    # (엑셀 제목이 '금액'인지 확인 필요. 우리가 처음에 '금액'이라고 만들었음)
-                    # 만약 엑셀 헤더가 영어면 그에 맞춰야 함. 일단 순서대로 4번째 열이라 가정하거나 이름으로 찾음.
-                    if '금액' in df.columns:
-                        # '150,000' 같은 문자열을 150000 숫자로 변환
-                        df['금액'] = df['금액'].astype(str).str.replace(',', '').astype(int)
-                        
-                        total_revenue = df['금액'].sum() # 총 매출
-                        count_work = len(df) # 총 건수
-                        
-                        # 멋진 숫자 카드 보여주기
-                        m1, m2 = st.columns(2)
-                        m1.metric("💰 누적 총 매출", f"{total_revenue:,}원")
-                        m2.metric("🔨 총 시공 건수", f"{count_work}건")
-                        
-                        st.divider()
-                        st.write("📋 **최근 시공 내역** (엑셀 내용)")
-                        # 최신순으로 정렬해서 보여주기
-                        st.dataframe(df.sort_index(ascending=False), use_container_width=True)
-                        
-                    else:
-                        st.warning("⚠️ 엑셀에 '금액' 칸을 못 찾겠습니다. 엑셀 첫 줄 제목을 확인해주세요.")
-                        st.dataframe(df) # 일단 있는 대로 보여줌
-                        
-                except Exception as e:
-                    st.error(f"데이터 계산 중 오류: {e}")
-                    st.dataframe(df)
-            else:
-                st.info("아직 장부에 저장된 내용이 없습니다. 아래에서 첫 입력을 해보세요!")
+                    df['금액'] = df['금액'].astype(str).str.replace(',', '').astype(int)
+                    total_revenue = df['금액'].sum()
+                    count_work = len(df)
+                    m1, m2 = st.columns(2)
+                    m1.metric("💰 누적 총 매출", f"{total_revenue:,}원")
+                    m2.metric("🔨 총 시공 건수", f"{count_work}건")
+                    st.divider()
+                    st.write("📋 **최근 시공 내역** (엑셀 내용)")
+                    st.dataframe(df.sort_index(ascending=False), use_container_width=True)
+                except: st.dataframe(df)
+            else: st.info("아직 데이터가 없습니다.")
 
             st.divider()
             
-            # [기존 기능] 장부 입력하기
-            st.write("✍️ **새로운 매출 입력하기**")
+            # [기존 기능 + 후기 입력칸 추가]
+            st.write("✍️ **새로운 매출 & 후기 입력하기**")
             with st.form("sheet_form"):
                 date = st.date_input("날짜")
-                s_place = st.text_input("현장명")
+                s_place = st.text_input("현장명 (예: 좌동 벽산아파트)")
                 s_work = st.text_input("시공 내용")
                 s_price = st.number_input("받은 금액 (원)", step=10000)
-                s_note = st.text_input("비고")
+                s_note = st.text_input("비고 (자재비 등)")
+                
+                # [여기가 핵심!] 후기 입력칸
+                st.markdown("---")
+                s_review = st.text_input("💬 고객 후기 (홈페이지 메인에 노출됩니다!)", placeholder="예: 사장님이 너무 친절하고 꼼꼼하게 봐주셨어요!")
+                
                 submit_sheet = st.form_submit_button("💾 장부에 저장하기")
+                
                 if submit_sheet:
                     with st.spinner("엑셀에 적는 중..."):
-                        if add_to_sheet(date, s_place, s_work, s_price, s_note):
-                            st.success(f"✅ 저장 완료! {s_price}원 입력됨. (새로고침하면 위에 반영됩니다)")
+                        # 후기(s_review)까지 같이 저장!
+                        if add_to_sheet(date, s_place, s_work, s_price, s_note, s_review):
+                            st.success(f"✅ 저장 완료! {s_price}원 입력됨.")
+                        else:
+                            st.error("저장 실패. (엑셀에 '후기' 열을 만드셨나요?)")
                             
         with tab3:
             st.subheader("📸 사진 도장 찍기 (워터마크)")
