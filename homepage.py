@@ -20,7 +20,7 @@ import watermarker
 # 1. 페이지 설정
 st.set_page_config(page_title="마이홈케어플러스", page_icon="🏠", layout="wide")
 
-# 2. 디자인(CSS) 설정
+# 2. 디자인(CSS) 설정 (안전하게 따옴표 3개 사용)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
@@ -40,7 +40,6 @@ st.markdown("""
     .feature-title { font-weight: bold; font-size: 1.2rem; color: #1E3A8A; margin-bottom: 10px; }
     .feature-text { font-size: 1rem; color: #666; line-height: 1.6; }
 
-    /* 후기 카드 스타일 */
     .review-card {
         background-color: #FFF8E1; padding: 20px; border-radius: 15px;
         border: 1px solid #FFECB3; margin-bottom: 15px;
@@ -86,7 +85,6 @@ def get_google_sheet():
         return client.open("마이홈케어 시공장부").sheet1
     except: return None
 
-# 장부에 데이터 쓰기 (후기 포함)
 def add_to_sheet(date, place, work, price, note, review):
     sheet = get_google_sheet()
     if sheet:
@@ -96,7 +94,6 @@ def add_to_sheet(date, place, work, price, note, review):
         except: return False
     return False
 
-# 장부에서 데이터 읽기
 def load_data():
     sheet = get_google_sheet()
     if sheet:
@@ -137,43 +134,4 @@ if menu == "홈":
     st.subheader("⭐⭐⭐⭐⭐ 고객님들의 찐 후기")
     df = load_data()
     if not df.empty and '후기' in df.columns:
-        reviews = df[df['후기'].astype(str).str.strip() != ""]
-        if not reviews.empty:
-            recent_reviews = reviews.tail(3).iloc[::-1] # 최신 3개
-            r_col1, r_col2, r_col3 = st.columns(3)
-            for idx, row in enumerate(recent_reviews.itertuples()):
-                short_review = row.후기[:50] + "..." if len(str(row.후기)) > 50 else row.후기
-                card_html = f"""
-                <div class="review-card">
-                    <div class="stars">⭐⭐⭐⭐⭐</div>
-                    <div class="review-text">"{short_review}"</div>
-                    <div class="review-info">{row.현장명} 고객님<br>({row.시공내용})</div>
-                </div>
-                """
-                if idx % 3 == 0: r_col1.markdown(card_html, unsafe_allow_html=True)
-                elif idx % 3 == 1: r_col2.markdown(card_html, unsafe_allow_html=True)
-                else: r_col3.markdown(card_html, unsafe_allow_html=True)
-        else:
-            st.info("아직 등록된 후기가 없습니다.")
-    else:
-        st.info("후기 데이터를 불러오는 중입니다...")
-
-    st.divider()
-    st.subheader("왜 마이홈케어플러스인가요?")
-    c1, c2, c3 = st.columns(3)
-    with c1: st.markdown('<div class="feature-card"><div class="feature-icon">🔍</div><div class="feature-title">첨단 장비 정밀 탐지</div><div class="feature-text">청음식/가스식 최신 장비 보유.<br>미세한 누수까지 찾아냅니다.</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown('<div class="feature-card"><div class="feature-icon">🛡️</div><div class="feature-title">책임 시공 보장</div><div class="feature-text">누수 원인을 못 찾으면<br>비용을 일절 받지 않습니다.</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown('<div class="feature-card"><div class="feature-icon">🚀</div><div class="feature-title">부산 전 지역 긴급출동</div><div class="feature-text">해운대, 수영, 동래 어디든<br>빠르게 달려갑니다.</div></div>', unsafe_allow_html=True)
-
-# ==========================================
-# 2. 서비스 소개
-# ==========================================
-elif menu == "서비스 소개":
-    st.header("🛠️ 마이홈케어플러스 전문 시공")
-    st.write("부산/경남 대표 홈케어! 아래 모든 항목을 직접 시공합니다.")
-    st.divider()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("💧 누수 & 방수 전문")
-        st.markdown('<div class="service-box"><b>1. 누수 출장 점검</b><br>- 정확한 원인 파악 및 전문가 소견서 발급</div>', unsafe_allow_html=True)
-        st.markdown('<div class="service-box"><b>2. 누수 탐지 (책임
+        reviews = df[df['후기'].astype
