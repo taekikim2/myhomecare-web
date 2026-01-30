@@ -7,12 +7,14 @@ import google.generativeai as genai
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
-import io # 추가됨
+import io
+import pandas as pd # 데이터를 다루는 판다스 추가!
+from datetime import datetime
 
 # 파일 불러오기
 import prompts      
 import calculator
-import watermarker # 방금 만든 도장 기계 불러오기!
+import watermarker
 
 # 1. 페이지 설정
 st.set_page_config(page_title="마이홈케어플러스", page_icon="🏠", layout="wide")
@@ -60,8 +62,8 @@ with st.sidebar:
     st.markdown("""<a href="https://open.kakao.com/o/sExample" target="_blank" class="kakao-btn">💬 카카오톡 무료 상담</a>""", unsafe_allow_html=True)
     st.markdown("### 📞 010-6533-3137")
 
-# --- 구글 시트 연결 함수 ---
-def add_to_sheet(date, place, work, price, note):
+# --- 구글 시트 연결 설정 (공통 사용) ---
+def get_google_sheet():
     try:
         raw_key = st.secrets["GOOGLE_SHEET_KEY"]
         try:
@@ -72,14 +74,33 @@ def add_to_sheet(date, place, work, price, note):
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json_key, scope)
         client = gspread.authorize(creds)
-        sheet = client.open("마이홈케어 시공장부").sheet1
-        sheet.append_row([str(date), place, work, price, note])
-        return True
+        return client.open("마이홈케어 시공장부").sheet1
     except Exception as e:
-        st.error(f"장부 저장 실패: {e}")
-        return False
+        return None
 
-# === [메인 기능들 (생략 - 기존과 동일)] ===
+# [데이터 쓰기]
+def add_to_sheet(date, place, work, price, note):
+    sheet = get_google_sheet()
+    if sheet:
+        try:
+            sheet.append_row([str(date), place, work, price, note])
+            return True
+        except: return False
+    return False
+
+# [NEW] [데이터 읽기] 장부 가져오기 함수
+def load_data():
+    sheet = get_google_sheet()
+    if sheet:
+        try:
+            # 모든 데이터를 가져와서 표(DataFrame)로 만듭니다.
+            data = sheet.get_all_records()
+            df = pd.DataFrame(data)
+            return df
+        except: return pd.DataFrame() # 에러나면 빈 표 반환
+    return pd.DataFrame()
+
+# === [메인 화면 내용 (기존 동일)] ===
 if menu == "홈":
     hero_col1, hero_col2 = st.columns([4, 6], gap="large")
     with hero_col1:
@@ -141,16 +162,14 @@ elif menu == "출장 지역":
 elif menu == "견적 문의":
     calculator.show_estimate()
 
-# === [관리자 모드 (업그레이드됨!)] ===
+# === [관리자 모드 (매출 상황판 추가!)] ===
 elif menu == "🔒 관리자 모드":
     password = st.text_input("비밀번호", type="password")
     
     if password == st.secrets.get("ADMIN_PW", ""):
         st.success("✅ 로그인 성공")
-        # 탭이 3개로 늘었습니다!
-        tab1, tab2, tab3 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 적기", "🖼️ 사진 워터마크"])
+        tab1, tab2, tab3 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 (매출)", "🖼️ 사진 워터마크"])
         
-        # [기능 1] 블로그 글쓰기
         with tab1:
             st.subheader("블로그 포스팅 (Gemini 2.5)")
             with st.form("blog_form"):
@@ -160,7 +179,6 @@ elif menu == "🔒 관리자 모드":
                     location = st.text_input("현장 위치", "부산 해운대구 좌동")
                 detail = st.text_area("작업 내용", height=100)
                 submit_blog = st.form_submit_button("글 생성")
-                
                 if submit_blog:
                     try:
                         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -171,9 +189,49 @@ elif menu == "🔒 관리자 모드":
                             st.code(response.text)
                     except Exception as e: st.error(f"에러: {e}")
 
-        # [기능 2] 시공 장부
+        # [NEW] 매출 장부 (데이터 조회 기능 추가)
         with tab2:
-            st.subheader("오늘의 매출 장부")
+            st.subheader("📊 마이홈케어 매출 현황")
+            
+            # 1. 엑셀에서 데이터 읽어오기
+            df = load_data()
+            
+            if not df.empty:
+                try:
+                    # 금액 열을 숫자로 변환 (쉼표 제거 등 처리)
+                    # (엑셀 제목이 '금액'인지 확인 필요. 우리가 처음에 '금액'이라고 만들었음)
+                    # 만약 엑셀 헤더가 영어면 그에 맞춰야 함. 일단 순서대로 4번째 열이라 가정하거나 이름으로 찾음.
+                    if '금액' in df.columns:
+                        # '150,000' 같은 문자열을 150000 숫자로 변환
+                        df['금액'] = df['금액'].astype(str).str.replace(',', '').astype(int)
+                        
+                        total_revenue = df['금액'].sum() # 총 매출
+                        count_work = len(df) # 총 건수
+                        
+                        # 멋진 숫자 카드 보여주기
+                        m1, m2 = st.columns(2)
+                        m1.metric("💰 누적 총 매출", f"{total_revenue:,}원")
+                        m2.metric("🔨 총 시공 건수", f"{count_work}건")
+                        
+                        st.divider()
+                        st.write("📋 **최근 시공 내역** (엑셀 내용)")
+                        # 최신순으로 정렬해서 보여주기
+                        st.dataframe(df.sort_index(ascending=False), use_container_width=True)
+                        
+                    else:
+                        st.warning("⚠️ 엑셀에 '금액' 칸을 못 찾겠습니다. 엑셀 첫 줄 제목을 확인해주세요.")
+                        st.dataframe(df) # 일단 있는 대로 보여줌
+                        
+                except Exception as e:
+                    st.error(f"데이터 계산 중 오류: {e}")
+                    st.dataframe(df)
+            else:
+                st.info("아직 장부에 저장된 내용이 없습니다. 아래에서 첫 입력을 해보세요!")
+
+            st.divider()
+            
+            # [기존 기능] 장부 입력하기
+            st.write("✍️ **새로운 매출 입력하기**")
             with st.form("sheet_form"):
                 date = st.date_input("날짜")
                 s_place = st.text_input("현장명")
@@ -184,33 +242,17 @@ elif menu == "🔒 관리자 모드":
                 if submit_sheet:
                     with st.spinner("엑셀에 적는 중..."):
                         if add_to_sheet(date, s_place, s_work, s_price, s_note):
-                            st.success(f"✅ 저장 완료! {s_price}원 입력됨.")
+                            st.success(f"✅ 저장 완료! {s_price}원 입력됨. (새로고침하면 위에 반영됩니다)")
                             
-        # [기능 3] 워터마크 찍기 (NEW!)
         with tab3:
             st.subheader("📸 사진 도장 찍기 (워터마크)")
-            st.write("블로그에 올릴 사진에 자동으로 서명을 넣습니다.")
-            
             uploaded_file = st.file_uploader("사진 파일을 드래그하거나 클릭해서 올리세요", type=["jpg", "png", "jpeg"])
-            
             if uploaded_file is not None:
-                # 기본 문구 (원하면 수정 가능하게 입력창 제공)
                 default_text = "마이홈케어플러스 010-6533-3137"
                 watermark_text = st.text_input("들어갈 문구", value=default_text)
-                
                 if st.button("도장 쾅! 찍기"):
                     with st.spinner("열심히 도장 찍는 중..."):
-                        # watermarker.py에 있는 함수 호출!
                         final_img, img_bytes = watermarker.add_watermark(uploaded_file, watermark_text)
-                        
                         st.success("완성! 아래 버튼을 눌러 다운로드하세요.")
-                        # 결과물 보여주기
                         st.image(final_img, caption="워터마크 적용된 사진", use_container_width=True)
-                        
-                        # 다운로드 버튼 제공
-                        st.download_button(
-                            label="💾 완성된 사진 다운로드",
-                            data=img_bytes,
-                            file_name=f"watermarked_{uploaded_file.name}",
-                            mime="image/jpeg"
-                        )
+                        st.download_button(label="💾 완성된 사진 다운로드", data=img_bytes, file_name=f"watermarked_{uploaded_file.name}", mime="image/jpeg")
