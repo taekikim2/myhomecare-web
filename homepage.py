@@ -134,4 +134,246 @@ if menu == "홈":
     st.subheader("⭐⭐⭐⭐⭐ 고객님들의 찐 후기")
     df = load_data()
     if not df.empty and '후기' in df.columns:
-        reviews = df[df['후기'].astype
+        reviews = df[df['후기'].astype(str).str.strip() != ""]
+        if not reviews.empty:
+            recent_reviews = reviews.tail(3).iloc[::-1] # 최신 3개
+            r_col1, r_col2, r_col3 = st.columns(3)
+            for idx, row in enumerate(recent_reviews.itertuples()):
+                short_review = row.후기[:50] + "..." if len(str(row.후기)) > 50 else row.후기
+                card_html = f"""
+                <div class="review-card">
+                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                    <div class="review-text">"{short_review}"</div>
+                    <div class="review-info">{row.현장명} 고객님<br>({row.시공내용})</div>
+                </div>
+                """
+                if idx % 3 == 0: r_col1.markdown(card_html, unsafe_allow_html=True)
+                elif idx % 3 == 1: r_col2.markdown(card_html, unsafe_allow_html=True)
+                else: r_col3.markdown(card_html, unsafe_allow_html=True)
+        else:
+            st.info("아직 등록된 후기가 없습니다.")
+    else:
+        st.info("후기 데이터를 불러오는 중입니다...")
+
+    st.divider()
+    st.subheader("왜 마이홈케어플러스인가요?")
+    c1, c2, c3 = st.columns(3)
+    with c1: 
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-title">첨단 장비 정밀 탐지</div>
+            <div class="feature-text">청음식/가스식 최신 장비 보유.<br>미세한 누수까지 찾아냅니다.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2: 
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <div class="feature-title">책임 시공 보장</div>
+            <div class="feature-text">누수 원인을 못 찾으면<br>비용을 일절 받지 않습니다.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c3: 
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🚀</div>
+            <div class="feature-title">부산 전 지역 긴급출동</div>
+            <div class="feature-text">해운대, 수영, 동래 어디든<br>빠르게 달려갑니다.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ==========================================
+# 2. 서비스 소개 (여기가 에러 났던 부분! 안전하게 수정 완료)
+# ==========================================
+elif menu == "서비스 소개":
+    st.header("🛠️ 마이홈케어플러스 전문 시공")
+    st.write("부산/경남 대표 홈케어! 아래 모든 항목을 직접 시공합니다.")
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("💧 누수 & 방수 전문")
+        st.markdown("""
+        <div class="service-box">
+            <b>1. 누수 출장 점검</b><br>
+            - 정확한 원인 파악 및 전문가 소견서 발급
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="service-box">
+            <b>2. 누수 탐지 (책임 시공)</b><br>
+            - 청음식/가스식 첨단 장비 보유<br>
+            - 못 찾으면 비용 0원!
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>3. 욕실 방수 공사</b><br>
+            - 철거부터 방수, 타일 마감까지 원스톱 해결
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>4. 외부 창틀 로프 코킹</b><br>
+            - 아파트 베란다 빗물 누수 완벽 차단 (로프 작업)
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>5. 욕조 배수구 교체</b><br>
+            - 욕조 파손 없이 배수구만 교체하는 특수 기술
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.subheader("🛁 생활 설비 & 인테리어")
+        st.markdown("""
+        <div class="service-box">
+            <b>6. 도배 (실크/합지)</b><br>
+            - 부분 도배부터 전체 도배까지 깔끔한 마감
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>7. 각종 수전(수도꼭지) 교체</b><br>
+            - 주방, 세면대, 샤워기, 베란다 수전 등
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>8. 양변기 교체</b><br>
+            - 치마형, 투피스 등 최신 도기 설치 및 폐기물 처리
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>9. 샤워기 설치</b><br>
+            - 해바라기 샤워기, 선반형 샤워기 설치
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="service-box">
+            <b>10. 환풍기 교체</b><br>
+            - 힘 쎈 환풍기, 댐퍼형(냄새 차단) 환풍기 교체
+        </div>
+        """, unsafe_allow_html=True)
+
+# ==========================================
+# 3. 시공 갤러리
+# ==========================================
+elif menu == "시공 갤러리":
+    st.header("✨ 시공 전/후 비교")
+    try: image_comparison(img1="before.jpg", img2="after.jpg", label1="Before", label2="After", width=700, in_memory=True)
+    except: st.error("사진 파일 필요")
+
+# ==========================================
+# 4. 출장 지역
+# ==========================================
+elif menu == "출장 지역":
+    st.header("📍 출장 가능 지역")
+    m = folium.Map(location=[35.1796, 129.0756], zoom_start=11)
+    folium.Circle(location=[35.1796, 129.0756], radius=20000, color="red", fill=True, fill_opacity=0.1).add_to(m)
+    st_folium(m, width=800, height=500)
+
+# ==========================================
+# 5. 견적 문의
+# ==========================================
+elif menu == "견적 문의":
+    calculator.show_estimate()
+
+# ==========================================
+# 6. 관리자 모드 (풀옵션: 블로그, 장부, 워터마크, QR코드)
+# ==========================================
+elif menu == "🔒 관리자 모드":
+    password = st.text_input("비밀번호", type="password")
+    
+    if password == st.secrets.get("ADMIN_PW", ""):
+        st.success("✅ 로그인 성공")
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 (매출)", "🖼️ 사진 워터마크", "📱 QR코드 생성"])
+        
+        # [탭1] 블로그
+        with tab1:
+            st.subheader("블로그 포스팅 (Gemini 2.5)")
+            with st.form("blog_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    topic = st.selectbox("공사 종류", ["누수 탐지", "욕실 방수", "수전 교체", "화장실 리모델링", "기타"])
+                    location = st.text_input("현장 위치", "부산 해운대구 좌동")
+                detail = st.text_area("작업 내용", height=100)
+                submit_blog = st.form_submit_button("글 생성")
+                if submit_blog:
+                    try:
+                        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                        model = genai.GenerativeModel('gemini-2.5-flash')
+                        final_prompt = prompts.get_blog_prompt(topic, location, detail)
+                        with st.spinner("AI가 글을 쓰는 중..."):
+                            response = model.generate_content(final_prompt)
+                            st.code(response.text)
+                    except Exception as e: st.error(f"에러: {e}")
+
+        # [탭2] 시공 장부 (매출 대시보드 + 후기 입력)
+        with tab2:
+            st.subheader("📊 마이홈케어 매출 현황")
+            df = load_data()
+            if not df.empty and '금액' in df.columns:
+                try:
+                    df['금액'] = df['금액'].astype(str).str.replace(',', '').astype(int)
+                    total_revenue = df['금액'].sum()
+                    count_work = len(df)
+                    m1, m2 = st.columns(2)
+                    m1.metric("💰 누적 총 매출", f"{total_revenue:,}원")
+                    m2.metric("🔨 총 시공 건수", f"{count_work}건")
+                    st.divider()
+                    st.write("📋 **최근 시공 내역**")
+                    st.dataframe(df.sort_index(ascending=False), use_container_width=True)
+                except: st.dataframe(df)
+            else: st.info("아직 데이터가 없습니다.")
+            st.divider()
+            st.write("✍️ **새로운 매출 & 후기 입력하기**")
+            with st.form("sheet_form"):
+                date = st.date_input("날짜")
+                s_place = st.text_input("현장명")
+                s_work = st.text_input("시공 내용")
+                s_price = st.number_input("받은 금액 (원)", step=10000)
+                s_note = st.text_input("비고")
+                st.markdown("---")
+                s_review = st.text_input("💬 고객 후기 (홈페이지 메인 노출)", placeholder="예: 사장님 최고!")
+                submit_sheet = st.form_submit_button("💾 장부에 저장하기")
+                if submit_sheet:
+                    with st.spinner("저장 중..."):
+                        if add_to_sheet(date, s_place, s_work, s_price, s_note, s_review):
+                            st.success(f"✅ 저장 완료! {s_price}원 입력됨.")
+                        else: st.error("저장 실패")
+
+        # [탭3] 워터마크
+        with tab3:
+            st.subheader("📸 사진 도장 찍기 (워터마크)")
+            uploaded_file = st.file_uploader("사진 파일을 드래그하거나 클릭해서 올리세요", type=["jpg", "png", "jpeg"])
+            if uploaded_file is not None:
+                default_text = "마이홈케어플러스 010-6533-3137"
+                watermark_text = st.text_input("들어갈 문구", value=default_text)
+                if st.button("도장 쾅! 찍기"):
+                    with st.spinner("도장 찍는 중..."):
+                        final_img, img_bytes = watermarker.add_watermark(uploaded_file, watermark_text)
+                        st.success("완성! 다운로드하세요.")
+                        st.image(final_img, caption="결과물", use_container_width=True)
+                        st.download_button(label="💾 다운로드", data=img_bytes, file_name=f"watermarked_{uploaded_file.name}", mime="image/jpeg")
+
+        # [탭4] QR코드 생성
+        with tab4:
+            st.subheader("📱 홈페이지 QR코드 만들기")
+            st.write("명함이나 작업 차량에 붙일 QR코드를 생성합니다.")
+            my_url = st.text_input("우리 홈페이지 주소 (https:// 포함)", "https://myhomecare-web.streamlit.app")
+            if st.button("QR코드 생성하기"):
+                qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={my_url}"
+                st.image(qr_url, caption="📷 핸드폰으로 찍어보세요!", width=300)
+                st.markdown(f"**[Tip]** 위 이미지를 마우스 오른쪽 클릭 -> '이미지 저장' 하셔서 명함집에 보내시면 됩니다.")
