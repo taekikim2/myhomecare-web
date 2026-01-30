@@ -372,7 +372,7 @@ elif menu == "🔒 관리자 모드":
         with tab4:
             st.subheader("📱 홈페이지 QR코드 만들기")
             st.write("명함이나 작업 차량에 붙일 QR코드를 생성합니다.")
-            my_url = st.text_input("우리 홈페이지 주소 (https:// 포함)", "https://myhomecare-web.streamlit.app")
+            my_url = st.text_input("우리 홈페이지 주소 (https:// 포함)", "https://myhomecare-busan.streamlit.app")
             if st.button("QR코드 생성하기"):
                 qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={my_url}"
                 st.image(qr_url, caption="📷 핸드폰으로 찍어보세요!", width=300)
