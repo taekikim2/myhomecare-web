@@ -4,10 +4,13 @@ from streamlit_image_comparison import image_comparison
 import folium
 from streamlit_folium import st_folium
 import google.generativeai as genai
-import prompts
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
+
+# [핵심] 우리가 만든 파일들을 불러옵니다!
+import prompts      # 블로그 글쓰기 대본
+import calculator   # 견적 계산기
 
 # 1. 페이지 설정
 st.set_page_config(page_title="마이홈케어플러스", page_icon="🏠", layout="wide")
@@ -21,6 +24,10 @@ st.markdown("""
         border-radius: 10px; text-decoration: none; font-weight: bold;
         display: block; text-align: center; margin: 10px 0;
     }
+    .service-box {
+        background-color: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;
+        border-left: 5px solid #1E3A8A;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -31,45 +38,93 @@ with st.sidebar:
     st.markdown("""<a href="https://open.kakao.com/o/sExample" target="_blank" class="kakao-btn">💬 카카오톡 무료 상담</a>""", unsafe_allow_html=True)
     st.markdown("### 📞 010-6533-3137")
 
-# --- [수정됨] 구글 시트 연결 함수 (더 강력해짐!) ---
+# --- 구글 시트 연결 함수 ---
 def add_to_sheet(date, place, work, price, note):
     try:
-        # 1. Secrets에서 키 꺼내기
         raw_key = st.secrets["GOOGLE_SHEET_KEY"]
-        
-        # 2. JSON 변환 (여기서 에러가 났던 것 해결!)
         try:
-            # 줄바꿈 문자가 있어도 너그럽게 이해해라(strict=False)
             json_key = json.loads(raw_key, strict=False)
         except json.JSONDecodeError:
-            # 그래도 안 되면, 강제로 줄바꿈을 펴준다
             json_key = json.loads(raw_key.replace('\n', '\\n'), strict=False)
 
-        # 3. 구글 드라이브 연결
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json_key, scope)
         client = gspread.authorize(creds)
-        
-        # 4. 엑셀 파일 열기
         sheet = client.open("마이홈케어 시공장부").sheet1
         sheet.append_row([str(date), place, work, price, note])
         return True
-        
     except Exception as e:
         st.error(f"장부 저장 실패: {e}")
-        st.caption("※ 힌트: 구글 시트 파일 이름이 '마이홈케어 시공장부'가 맞는지, 로봇 계정(sheet-bot)에게 '편집자' 권한을 줬는지 확인해보세요.")
         return False
 
-# === 메인 기능 ===
+# === 메인 화면 기능들 ===
+
 if menu == "홈":
     st.markdown('<p class="main-header">"고치지 못하면 돈을 받지 않습니다"</p>', unsafe_allow_html=True)
     try: st.image("after.jpg", use_container_width=True)
     except: st.info("사진 필요")
     st.info("💧 누수 탐지 | 🛁 욕실 리모델링 | 🛠️ 종합 집수리")
 
+# === [업그레이드된 서비스 소개] ===
 elif menu == "서비스 소개":
-    st.header("🛠️ 전문 시공 분야")
-    st.write("누수 탐지, 방수 공사, 욕실 리모델링, 수전 교체 등 집수리 전반")
+    st.header("🛠️ 마이홈케어플러스 전문 시공")
+    st.write("부산/경남 대표 홈케어! 아래 모든 항목을 직접 시공합니다.")
+    st.divider()
+
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("💧 누수 & 방수 전문")
+        st.markdown("""
+        <div class="service-box">
+            <b>1. 누수 출장 점검</b><br>
+            - 정확한 원인 파악 및 전문가 소견서 발급
+        </div>
+        <div class="service-box">
+            <b>2. 누수 탐지 (책임 시공)</b><br>
+            - 청음식/가스식 첨단 장비 보유<br>
+            - 못 찾으면 비용 0원!
+        </div>
+        <div class="service-box">
+            <b>3. 욕실 방수 공사</b><br>
+            - 철거부터 방수, 타일 마감까지 원스톱 해결
+        </div>
+        <div class="service-box">
+            <b>4. 외부 창틀 로프 코킹</b><br>
+            - 아파트 베란다 빗물 누수 완벽 차단 (로프 작업)
+        </div>
+        <div class="service-box">
+            <b>5. 욕조 배수구 교체</b><br>
+            - 욕조 파손 없이 배수구만 교체하는 특수 기술
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.subheader("🛁 생활 설비 & 인테리어")
+        st.markdown("""
+        <div class="service-box">
+            <b>6. 도배 (실크/합지)</b><br>
+            - 부분 도배부터 전체 도배까지 깔끔한 마감
+        </div>
+        <div class="service-box">
+            <b>7. 각종 수전(수도꼭지) 교체</b><br>
+            - 주방, 세면대, 샤워기, 베란다 수전 등
+        </div>
+        <div class="service-box">
+            <b>8. 양변기 교체</b><br>
+            - 치마형, 투피스 등 최신 도기 설치 및 폐기물 처리
+        </div>
+        <div class="service-box">
+            <b>9. 샤워기 설치</b><br>
+            - 해바라기 샤워기, 선반형 샤워기 설치
+        </div>
+        <div class="service-box">
+            <b>10. 환풍기 교체</b><br>
+            - 힘 쎈 환풍기, 댐퍼형(냄새 차단) 환풍기 교체
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.info("💡 이 외에도 집수리와 관련된 모든 상담이 가능합니다.")
 
 elif menu == "시공 갤러리":
     st.header("✨ 시공 전/후 비교")
@@ -84,8 +139,8 @@ elif menu == "출장 지역":
     st_folium(m, width=800, height=500)
 
 elif menu == "견적 문의":
-    st.header("📝 상담 신청")
-    st.write("010-6533-3137 문자/전화 환영")
+    # calculator.py 파일에 있는 기능을 실행합니다!
+    calculator.show_estimate()
 
 # === [관리자 모드] ===
 elif menu == "🔒 관리자 모드":
@@ -93,7 +148,6 @@ elif menu == "🔒 관리자 모드":
     
     if password == st.secrets.get("ADMIN_PW", ""):
         st.success("✅ 로그인 성공")
-        
         tab1, tab2 = st.tabs(["📝 블로그 글쓰기", "📊 시공 장부 적기"])
         
         with tab1:
@@ -120,10 +174,10 @@ elif menu == "🔒 관리자 모드":
             st.subheader("오늘의 매출 장부")
             with st.form("sheet_form"):
                 date = st.date_input("날짜")
-                s_place = st.text_input("현장명 (예: 좌동 벽산아파트)")
-                s_work = st.text_input("시공 내용 (예: 변기 교체)")
+                s_place = st.text_input("현장명")
+                s_work = st.text_input("시공 내용")
                 s_price = st.number_input("받은 금액 (원)", step=10000)
-                s_note = st.text_input("비고 (자재비 등)")
+                s_note = st.text_input("비고")
                 
                 submit_sheet = st.form_submit_button("💾 장부에 저장하기")
                 
